@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# win-icon - Nerd-Font glyph for the active window (waybar custom/winclass).
+# waybar 0.14.0 does NOT support image-{icon} on hyprland/window (module gets
+# disabled: "argument not found"), so we map window class -> Nerd Font glyph
+# (JetBrainsMono Nerd Font). Runs FROM waybar (inherits HYPRLAND_INSTANCE_SIGNATURE);
+# for ssh tests we derive it. Empty if no focus; generic glyph for unknown class.
+import os, glob, json, subprocess
+
+os.environ.setdefault("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid())
+if "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ:
+    hyprdir = os.path.join(os.environ["XDG_RUNTIME_DIR"], "hypr")
+    dirs = [d for d in glob.glob(hyprdir + "/*") if os.path.isdir(d)]
+    if dirs:
+        os.environ["HYPRLAND_INSTANCE_SIGNATURE"] = os.path.basename(
+            max(dirs, key=os.path.getmtime))
+
+try:
+    out = subprocess.check_output(["hyprctl", "activewindow", "-j"],
+                                  stderr=subprocess.DEVNULL, timeout=2)
+    cls = (json.loads(out).get("class") or "").lower()
+except Exception:
+    cls = ""
+
+# (class substring, Nerd Font codepoint). Order matters - first match wins.
+RULES = [
+    ("telegram",    0xf2c6),  # nf-fa-telegram
+    ("chromium",    0xf268),  # nf-fa-chrome
+    ("chrome",      0xf268),
+    ("firefox",     0xf269),  # nf-fa-firefox
+    ("nautilus",    0xf07b),  # nf-fa-folder
+    ("files",       0xf07b),
+    ("code",        0xf121),  # nf-fa-code
+    ("tabby",       0xe795),  # nf-dev-terminal
+    ("foot",        0xe795),
+    ("alacritty",   0xe795),
+    ("kitty",       0xe795),
+    ("term",        0xe795),
+    ("pavucontrol", 0xf028),  # nf-fa-volume_up
+    ("nm-",         0xf1eb),  # nf-fa-wifi
+]
+GENERIC = 0xf2d0  # nf-fa-window_maximize
+
+cp = 0
+if cls:
+    cp = GENERIC
+    for key, code in RULES:
+        if key in cls:
+            cp = code
+            break
+print(chr(cp) if cp else "", end="")

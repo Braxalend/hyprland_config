@@ -1,0 +1,19 @@
+#!/bin/sh
+# rofi-menu XOFF LINES WIDTH [доп-аргументы rofi] — трей-меню на rofi с закрытием по клику-мимо.
+#   stdin  = пункты (dmenu; поддержаны \0icon\x1f<name> и \0nonselectable\x1ftrue)
+#   stdout = выбранный пункт (текст до \0)
+#   XOFF   = сдвиг ВЛЕВО от правого края экрана, px (позиция под нужной иконкой waybar)
+#   LINES  = число строк (высота под контент)
+#   WIDTH  = ширина окна, px
+XOFF="$1"; LINES="$2"; WIDTH="$3"; shift 3
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"; export XDG_RUNTIME_DIR
+[ -n "$HYPRLAND_INSTANCE_SIGNATURE" ] || \
+  export HYPRLAND_INSTANCE_SIGNATURE=$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | grep -v '\.lock' | head -1)
+CLOSER="$HOME/.local/bin/rofi-outside-close"
+hyprctl keyword bindn ",mouse:272,exec,$CLOSER" >/dev/null 2>&1
+out=$(rofi -dmenu -show-icons \
+        -theme "$HOME/.config/rofi/menu.rasi" \
+        -theme-str "window { x-offset: -${XOFF}px; width: ${WIDTH}px; } listview { lines: ${LINES}; }" \
+        "$@")
+hyprctl keyword unbind ",mouse:272" >/dev/null 2>&1
+printf '%s' "$out"

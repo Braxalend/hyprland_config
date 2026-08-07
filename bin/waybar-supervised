@@ -1,0 +1,16 @@
+#!/bin/bash
+# waybar под супервизией: рестарт при любом выходе + лог с timestamp/exit-кодом.
+# Корень: waybar в uwsm-scope периодически умирает тихо, без следов.
+# Запуск: exec-once = uwsm app -- ~/.local/bin/waybar-supervised (hyprland.conf).
+# Намеренно убить панель: pkill -f waybar-supervised (тогда и цикл умрёт), иначе перезапустится.
+log="$HOME/.local/state/waybar.log"
+mkdir -p "$HOME/.local/state"
+while true; do
+  # мини-ротация, чтобы лог не разрастался
+  [ -f "$log" ] && [ "$(stat -c%s "$log")" -gt 1048576 ] && mv -f "$log" "$log.old"
+  echo "--- waybar start $(date -Is) pid родителя=$$ ---" >>"$log"
+  waybar >>"$log" 2>&1
+  rc=$?
+  echo "--- waybar exit rc=$rc $(date -Is) — рестарт через 2с ---" >>"$log"
+  sleep 2
+done

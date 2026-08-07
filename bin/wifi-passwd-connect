@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# wifi-passwd-connect <ssid> — интерактивный ввод пароля Wi-Fi в терминале foot и подключение.
+# Терминал всегда надёжно рендерится под Hyprland (в отличие от rofi lines:0 / GTK4-zenity,
+# которые под Wayland капризили: невидимое окно / rc=255). Пароль скрыт (read -s), повтор при ошибке.
+export LC_ALL=C
+ssid="$1"
+[ -z "$ssid" ] && { echo "нет SSID"; sleep 2; exit 1; }
+printf '\033]0;Wi-Fi: %s\007' "$ssid"     # заголовок окна
+echo "═══ Подключение к Wi-Fi: $ssid ═══"
+echo
+for try in 1 2 3; do
+    read -rsp "Пароль (Enter — подключить · пустой Enter — отмена): " pw; echo
+    [ -z "$pw" ] && { echo "Отменено."; sleep 1; exit 0; }
+    echo "Подключаюсь…"
+    if nmcli -w 25 dev wifi connect "$ssid" password "$pw"; then
+        echo; echo "✓ Подключено к \"$ssid\". Окно закроется…"; sleep 2; exit 0
+    fi
+    echo "✗ Не удалось (попытка $try/3). Проверьте пароль и повторите."; echo
+done
+echo "Прекращаю попытки. Enter — закрыть."; read -r _
+exit 1

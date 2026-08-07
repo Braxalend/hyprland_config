@@ -1,0 +1,67 @@
+/* rofi трей-меню — позиционированное окно (правый верх, под иконкой waybar), matrix-тема,
+   фон 15% прозрачности, компактно по числу пунктов. Строка поиска СКРЫТА (inputbar enabled:false
+   — оставлена в дереве, иначе listview схлопывается по высоте). Заголовка нет.
+   Закрытие по клику-мимо (вкл. пустой стол) — внешним closer'ом (bindn mouse + гео-проверка).
+   -theme-str per-menu: window { x-offset } (сдвиг под иконку) + listview { lines } (высота). */
+* {
+    bg:       rgba(0, 8, 2, 85%);
+    fg:       #00cc34ff;
+    fg-sel:   #00ff41ff;
+    accent:   #00ff41ff;
+    sel-bg:   rgba(0, 255, 65, 16%);
+    clear:    rgba(0, 0, 0, 0%);
+    background-color: transparent;
+    text-color: @fg;
+    font: "JetBrainsMono Nerd Font 13";
+}
+window {
+    location:         north east;
+    anchor:           north east;
+    y-offset:         32px;
+    x-offset:         -6px;
+    width:            270px;
+    background-color: @bg;
+    border:           2px;
+    border-color:     @accent;
+    border-radius:    8px;
+    padding:          6px;
+}
+mainbox {
+    background-color: transparent;
+    spacing:          0;
+    children:         [ "inputbar", "listview" ];
+}
+inputbar { enabled: false; }
+listview {
+    background-color: transparent;
+    lines:            8;
+    columns:          1;
+    scrollbar:        false;
+    spacing:          2px;
+}
+element {
+    background-color: transparent;
+    text-color:       @fg;
+    orientation:      horizontal;
+    padding:          4px 8px;
+    spacing:          8px;
+    border:           1px;
+    border-color:     @clear;
+    border-radius:    5px;
+    children:         [ element-icon, element-text ];
+}
+element selected.normal {
+    background-color: @sel-bg;
+    border-color:     @accent;
+    text-color:       @fg-sel;
+}
+element-icon {
+    background-color: transparent;
+    size:             20px;
+    vertical-align:   0.5;
+}
+element-text {
+    background-color: transparent;
+    text-color:       inherit;
+    vertical-align:   0.5;
+}

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# ac-indicator — питание от сети/батареи для waybar (правее процентов батареи).
+# online=1 → от сети (🔌), 0 → от батареи (🔋). JSON с class для цвета.
+online=""
+for a in /sys/class/power_supply/AC*/online /sys/class/power_supply/ADP*/online; do
+    [ -r "$a" ] && { online="$(cat "$a")"; break; }
+done
+if [ "$online" = "1" ]; then
+    printf '{"text":"🔌","class":"ac","tooltip":"Питание от сети"}'
+else
+    printf '{"text":"🔋","class":"bat","tooltip":"От батареи"}'
+fi

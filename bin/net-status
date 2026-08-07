@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# net-status — строка waybar: тип подключения (Wi-Fi 2.4/5/6 ГГц или LAN) + внешний IP.
+# Внешний IP тянется В ФОНЕ — панель НЕ блокируется: показываем мгновенно из кэша,
+# фоновый рефреш обновляет кэш и шлёт waybar SIGRTMIN+8 при СМЕНЕ IP. Никакого warn-глифа:
+# раньше при фетч-фейле дописывался U+F071 (nf-fa-warning) — рисовался тофу-треугольником после
+# IP; убран. Сеть только ЧИТАЕМ.
+# LC_ALL=C — обойти локаль-грабли (ru nmcli ACTIVE='да'). Глифы монохромные Nerd (\U000fXXXX),
+# генерим под C.UTF-8 (глобальный LC_ALL=C ломает \U → литерал).
+export LC_ALL=C
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/ext-ip"
+lock="${XDG_CACHE_HOME:-$HOME/.cache}/ext-ip.lock"
+nl=$'\n'
+
+# --- режим фонового рефреша extip (не блокирует панель) ---
+if [ "$1" = "--refresh" ]; then
+  exec 9>"$lock" 2>/dev/null || exit 0
+  flock -n 9 || exit 0                       # один экземпляр рефреша
+  old="$(cat "$cache" 2>/dev/null)"
+  for url in https://icanhazip.com https://ifconfig.me/ip https://api.ipify.org; do
+    ip="$(curl -s --max-time 3 "$url" 2>/dev/null | tr -d '[:space:]')"
+    if printf '%s' "$ip" | grep -qE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then
+      printf '%s' "$ip" > "$cache"
+      [ "$ip" != "$old" ] && pkill -RTMIN+8 -x waybar 2>/dev/null   # сменился IP -> перерисовать
+      exit 0
+    fi
+  done
+  exit 0
+fi
+
+# запустить фоновый рефреш и сразу продолжить (панель не ждёт extip)
+setsid -f "$0" --refresh >/dev/null 2>&1
+
+# монохромные Nerd-глифы (проверены в cmap шрифта); генерация под UTF-8
+G_WIFI="$(LC_ALL=C.UTF-8 printf '\U000f05a9')"   # nf-md-wifi
+G_ETH="$(LC_ALL=C.UTF-8 printf '\U000f0200')"    # nf-md-ethernet
+G_OFF="$(LC_ALL=C.UTF-8 printf '\U000f0c9b')"    # nf-md-network_off
+G_WEB="$(LC_ALL=C.UTF-8 printf '\U000f059f')"    # nf-md-web
+
+extip="$(cat "$cache" 2>/dev/null)"
+if printf '%s' "$extip" | grep -qE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then ipseg=" · ${extip}"; else extip=""; ipseg=""; fi
+
+ptype="$(busctl get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager \
+         org.freedesktop.NetworkManager PrimaryConnectionType 2>/dev/null | awk '{print $2}' | tr -d '"')"
+wdev="$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="wifi"&&$3=="connected"{print $1;exit}')"
+edev="$(nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$2=="ethernet"&&$3=="connected"{print $1;exit}')"
+
+band_of() {
+  local f="${1:-0}"
+  if   [ "$f" -lt 3000 ] 2>/dev/null; then echo "2.4G"
+  elif [ "$f" -lt 5925 ] 2>/dev/null; then echo "5G"
+  else echo "6G"; fi
+}
+
+case "$ptype" in
+  802-11-wireless)
+    ssid="$(nmcli -g GENERAL.CONNECTION dev show "$wdev" 2>/dev/null)"
+    apline="$(nmcli -t -f IN-USE,SIGNAL,FREQ,CHAN dev wifi 2>/dev/null | awk -F: '$1=="*"{print;exit}')"
+    sig="$(printf '%s' "$apline"  | cut -d: -f2)"
+    freq="$(printf '%s' "$apline" | cut -d: -f3 | grep -oE '[0-9]+' | head -1)"
+    chan="$(printf '%s' "$apline" | cut -d: -f4)"
+    band="$(band_of "$freq")"
+    sshort="$ssid"; [ ${#sshort} -gt 16 ] && sshort="${sshort:0:15}…"
+    text="${G_WIFI} ${band} ${sshort}${ipseg}"
+    tip="Wi-Fi: ${ssid}${nl}${band/G/ ГГц} · канал ${chan} · сигнал ${sig}%${nl}Интерфейс: ${wdev}"
+    [ -n "$edev" ] && tip="${tip}${nl}Также подключён провод: ${edev}"
+    tip="${tip}${nl}Внешний IP: ${extip:-—}"
+    class="wifi"
+    ;;
+  802-3-ethernet)
+    ename="$(nmcli -g GENERAL.CONNECTION dev show "$edev" 2>/dev/null)"
+    text="${G_ETH} LAN${ipseg}"
+    tip="Проводное: ${ename}${nl}Интерфейс: ${edev}${nl}Внешний IP: ${extip:-—}"
+    class="wired"
+    ;;
+  *)
+    if [ -n "$extip" ]; then text="${G_WEB} ${extip}"; else text="${G_OFF} нет сети"; fi
+    tip="Первичное соединение: ${ptype:-нет}${nl}Внешний IP: ${extip:-—}"
+    class="offline"
+    ;;
+esac
+
+jq -cn --arg t "$text" --arg tt "$tip" --arg c "$class" '{text:$t,tooltip:$tt,class:$c}'

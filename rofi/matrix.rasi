@@ -1,0 +1,94 @@
+/* rofi matrix-тема (зелёный #00ff41 акцент / #00cc34 текст на чёрном),
+   в тон waybar/fuzzel/трей-меню. JetBrainsMono Nerd Font. Иконки приложений слева. */
+* {
+    bg:          rgba(0, 8, 2, 96%);
+    bg-input:    #000802ff;
+    fg:          #00cc34ff;   /* обычный текст (приглушённый зелёный) */
+    fg-sel:      #00ff41ff;   /* выделенный/акцентный текст */
+    accent:      #00ff41ff;   /* рамки, prompt */
+    sel-bg:      rgba(0, 255, 65, 16%);
+    clear:       rgba(0, 0, 0, 0%);
+
+    background-color: transparent;
+    text-color:  @fg;
+    font:        "JetBrainsMono Nerd Font 14";
+}
+
+window {
+    background-color: @bg;
+    border:           2px;
+    border-color:     @accent;
+    border-radius:    8px;
+    width:            40%;
+    padding:          8px;
+}
+
+mainbox {
+    background-color: transparent;
+    spacing:          8px;
+    children:         [ inputbar, listview ];
+}
+
+inputbar {
+    background-color: @bg-input;
+    text-color:       @fg-sel;
+    border:           1px;
+    border-color:     @accent;
+    border-radius:    6px;
+    padding:          6px 8px;
+    spacing:          6px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    background-color: transparent;
+    text-color:       @accent;
+}
+
+entry {
+    background-color: transparent;
+    text-color:       @fg-sel;
+    placeholder:      "";
+    placeholder-color: @fg;
+}
+
+listview {
+    background-color: transparent;
+    lines:            11;
+    columns:          1;
+    scrollbar:        false;
+    spacing:          2px;
+    cycle:            true;
+    dynamic:          true;
+}
+
+element {
+    background-color: transparent;
+    text-color:       @fg;
+    orientation:      horizontal;
+    padding:          5px 6px;
+    spacing:          10px;
+    border:           1px;
+    border-color:     @clear;
+    border-radius:    5px;
+    children:         [ element-icon, element-text ];
+}
+
+element selected {
+    background-color: @sel-bg;
+    border-color:     @accent;
+    text-color:       @fg-sel;
+}
+
+element-icon {
+    background-color: transparent;
+    size:             26px;
+    vertical-align:   0.5;
+}
+
+element-text {
+    background-color: transparent;
+    text-color:       inherit;
+    vertical-align:   0.5;
+    margin:           0 0 0 4px;
+}

@@ -1,0 +1,36 @@
+/* wofi matrix-тема (зелёный #00ff41/#00cc34 на чёрном), в тон waybar-панели. */
+* {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 14px;
+}
+window {
+    background-color: rgba(0, 8, 2, 0.96);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    color: #00cc34;
+}
+#outer-box { margin: 8px; }
+#input {
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background-color: #000802;
+    color: #00ff41;
+    border: 1px solid #00ff41;
+    border-radius: 6px;
+}
+#input:focus { border: 1px solid #00ff41; }
+#scroll { margin: 0; }
+#inner-box { margin: 0; }
+#entry {
+    padding: 5px 6px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+}
+#entry:selected {
+    background-color: rgba(0, 255, 65, 0.16);
+    border: 1px solid #00ff41;
+}
+#text { color: #00cc34; margin-left: 10px; }
+#entry:selected #text { color: #00ff41; }
+/* Иконка приложения — слева от текста (wofi drun-entry горизонтальный: #img, затем #text). */
+#img { margin-left: 2px; min-width: 26px; }

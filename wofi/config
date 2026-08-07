@@ -1,0 +1,16 @@
+# wofi — drun-лончер (SUPER+SHIFT+D). Matrix-тема + иконки приложений слева.
+# ВАЖНО: ключи конфига wofi — через ПОДЧЁРКИВАНИЕ (allow_images, image_size, sort_order),
+# НЕ через дефис! `allow-images` (дефис) молча игнорируется → иконок нет.
+show=drun
+prompt=Приложения
+allow_images=true
+image_size=26
+insensitive=true
+matching=fuzzy
+sort_order=default
+width=40%
+lines=11
+columns=1
+term=foot
+hide_scroll=true
+no_actions=true

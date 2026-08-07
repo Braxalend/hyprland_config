@@ -1,0 +1,150 @@
+/* Waybar — matrix-зелёный #00ff41 на чёрном */
+* {
+    /* БЕЗ "Noto Color Emoji" в общем стеке! Этот color-шрифт перехватывал ASCII-ЦИФРЫ
+       (0-9 есть в нём для keycap-эмодзи) и рисовал их СВОИМИ серыми глифами, игнорируя
+       CSS color → цифры в панели были серые/белые, а `:`/буквы (JetBrainsMono) — зелёные.
+       Emoji-шрифт возвращаем ТОЛЬКО модулям, где реально нужен эмодзи (clip/layout). */
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 16px;
+    font-weight: normal;
+    letter-spacing: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/* Эмодзи (📋 буфер, флаги раскладки) — только здесь; JetBrainsMono первым (буквы/Nerd-глифы
+   в него), эмодзи падают в Noto как fallback и НЕ перехватывают цифры других модулей. */
+#custom-clip, #custom-layout {
+    font-family: "JetBrainsMono Nerd Font Mono", "Noto Color Emoji", monospace;
+}
+
+/* Плотные цифры у числовых модулей + лёгкое зелёное свечение для контраста. Точечно по id
+   (НЕ через `*`/`window#waybar label` — те текут в календарь/трей-меню/глиф окна).
+   letter-spacing -2px (не -5px: при -5px штрихи налезали и тонули в сером антиалиасинге;
+   -2px = плотно, но чисто). glow `0 0 1px #00cc34`
+   делает цифры ярко-зелёными. */
+#clock, #cpu, #memory, #temperature, #battery, #custom-extip, #pulseaudio {
+    letter-spacing: -2px;
+    text-shadow: 0 0 1px #00cc34;
+}
+
+window#waybar {
+    background: rgba(0, 8, 2, 0.85);
+    color: #00cc34;
+    border-bottom: 1px solid #00ff41;
+}
+
+#workspaces button {
+    padding: 0 4px;
+    color: #0a7a2a;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+}
+#workspaces button.active {
+    color: #00ff41;
+    font-weight: bold;
+    border-bottom: 2px solid #00ff41;
+}
+#workspaces button.urgent {
+    color: #ff2200;
+    border-bottom: 2px solid #ff2200;
+}
+#workspaces button:hover {
+    background: rgba(0, 255, 65, 0.12);
+    color: #00cc34;
+}
+
+#window { color: #00cc33; }
+
+#cpu, #memory, #temperature, #custom-extip, #pulseaudio,
+#custom-clip, #custom-layout, #clock, #tray, #battery, #custom-ac, #custom-power,
+#custom-winclass {
+    padding: 0 5px;
+    color: #00cc34;
+    background: transparent;
+}
+
+#window { padding: 0 6px; }
+
+/* Значок активного приложения (win-icon → Nerd-глиф). Крупный (+40%: 18→22px), вписывается
+   в бар height=30, не обрезается. */
+#custom-winclass {
+    font-size: 22px;
+    padding: 0 8px;
+    color: #00cc34;
+}
+
+#clock { color: #00cc34; }
+#temperature.critical { color: #ff2200; }
+#pulseaudio.muted { color: #0a7a2a; }
+#custom-layout { color: #00cc34; }
+#custom-extip { color: #00cc34; }
+#custom-clip { color: #00cc34; }
+#battery { color: #00cc34; }
+#battery.warning { color: #ffcc00; }
+#battery.critical { color: #ff2200; }
+#custom-ac { color: #00cc34; }
+#custom-ac.bat { color: #ff9500; }
+
+#custom-power { color: #ff3333; }
+
+tooltip {
+    background: rgba(0, 8, 2, 0.85);
+    border: 1px solid #00ff41;
+    color: #00cc34;
+    padding: 1px 2px;
+}
+tooltip label {
+    background: transparent;
+    color: #00cc34;
+    letter-spacing: 0;
+    margin: 0;
+    padding: 0;
+    text-shadow: 1px 1px 2px #000000, 0 0 3px #000000;
+}
+
+/* Попап-меню трея — matrix-стиль,
+   в тон панели. Меню трея waybar рендерит через dbusmenu-gtk3 как GtkMenu; стилизуем
+   селекторами menu/menuitem. Нормальный интервал (не «скукоженный»). */
+menu {
+    background: rgba(0, 8, 2, 0.85);
+    border: 1px solid #00ff41;
+    color: #00cc34;
+    letter-spacing: 0;
+}
+menu menuitem {
+    color: #00cc34;
+    background: transparent;
+    letter-spacing: 0;
+    padding: 2px 8px;
+}
+menu menuitem * {
+    letter-spacing: 0;
+}
+menu menuitem:hover,
+menu menuitem:focus {
+    background: rgba(0, 255, 65, 0.15);
+    color: #00cc34;
+}
+menu separator {
+    background: rgba(0, 255, 65, 0.35);
+}
+
+/* wlr/taskbar убран — модуль снят из modules-left
+(* Панель задач (wlr/taskbar): иконки всех окон, matrix-акцент активного. *)
+#taskbar { padding: 0 2px; }
+#taskbar button {
+    padding: 0 4px;
+    margin: 0 1px;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+}
+#taskbar button.active {
+    background: rgba(0, 255, 65, 0.12);
+    border-bottom: 2px solid #00ff41;
+}
+#taskbar button:hover {
+    background: rgba(0, 255, 65, 0.15);
+}
+*/

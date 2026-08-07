@@ -1,0 +1,21 @@
+#!/bin/sh
+# SUDO_ASKPASS helper: sudo -A calls this to get the password via a GUI dialog
+# (zenity), needed when there's no TTY (commands run from scripts/трея).
+# Под Hyprland на время диалога форсит раскладку us (индекс 0 в "us,ru"),
+# после — возвращает прежнюю. Использование:
+#   export SUDO_ASKPASS="$HOME/.local/bin/sudo-askpass"; sudo -A <cmd>
+
+if [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ] && command -v hyprctl >/dev/null 2>&1; then
+  # активная раскладка первой физической клавиатуры (не virtual/button/bus)
+  prev=$(hyprctl devices -j 2>/dev/null | jq -r '[.keyboards[] | select(.name | test("virtual|button|bus") | not)][0].active_keymap' 2>/dev/null)
+  hyprctl switchxkblayout all 0 >/dev/null 2>&1
+
+  zenity --password --title="sudo: ${SUDO_PROMPT:-password for $USER}"
+  ret=$?
+
+  case "$prev" in English*|"") : ;; *) hyprctl switchxkblayout all 1 >/dev/null 2>&1 ;; esac
+  exit $ret
+fi
+
+zenity --password --title="sudo: ${SUDO_PROMPT:-password for $USER}"
+exit $?

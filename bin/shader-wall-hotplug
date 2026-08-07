@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# shader-wall-hotplug — держит живые GLSL-обои на выходах, подключённых ПОСЛЕ входа
+# (докстанция). Слушает Hyprland socket2; при monitoradded поднимает glpaper на новом
+# выходе (только если сейчас режим шейдера — есть хоть один glpaper), при monitorremoved
+# прибивает залипший glpaper этого выхода. Запуск из exec-once (uwsm app --).
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+SIG="${HYPRLAND_INSTANCE_SIGNATURE:-$(ls -1 "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1)}"
+SOCK="$XDG_RUNTIME_DIR/hypr/$SIG/.socket2.sock"
+GLPAPER="$(command -v glpaper || echo /usr/local/bin/glpaper)"
+SHADER="$HOME/.config/hypr/shaders/smoke-green.frag"
+FPS="${FPS:-30}"
+[ -S "$SOCK" ] || { echo "no socket2: $SOCK" >&2; exit 1; }
+
+has_glpaper_on(){ pgrep -af glpaper | grep -qE "[[:space:]]$1[[:space:]/]"; }
+
+socat -U - UNIX-CONNECT:"$SOCK" 2>/dev/null | while IFS= read -r line; do
+  case "$line" in
+    monitoradded\>\>*)
+      out="${line#monitoradded>>}"; out="${out%%,*}"
+      pgrep -x glpaper >/dev/null 2>&1 || continue   # мы в статичном режиме — не лезем
+      has_glpaper_on "$out" && continue
+      setsid "$GLPAPER" -f "$FPS" "$out" "$SHADER" >"/tmp/glpaper-$out.out" 2>&1 </dev/null & disown 2>/dev/null || true
+      ;;
+    monitorremoved\>\>*)
+      out="${line#monitorremoved>>}"; out="${out%%,*}"
+      for pid in $(pgrep -af glpaper | grep -E "[[:space:]]$out[[:space:]/]" | awk "{print \$1}"); do kill "$pid" 2>/dev/null || true; done
+      ;;
+  esac
+done

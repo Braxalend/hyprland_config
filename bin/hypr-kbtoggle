@@ -1,0 +1,16 @@
+#!/bin/bash
+# Глобально-синхронный переключатель раскладки для Hyprland.
+# В Hyprland раскладка ПОКОМАНДНАЯ (per-device): физические клавы и виртуальные
+# клавиатуры — у каждой своя группа. Старый бинд
+# `switchxkblayout current next` дёргал только одно (обычно виртуальное) устройство
+# → ввод через виртуальную клавиатуру оставался на старой раскладке. Этот скрипт форсит ВСЕ
+# клавиатуры в одну и ту же раскладку, поэтому переключение
+# работает и для ввода, приходящего через виртуальные клавы.
+# Эталон — первая НЕ-виртуальная клавиатура.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+[ -z "$HYPRLAND_INSTANCE_SIGNATURE" ] && \
+  export HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | grep -v '\.lock' | head -1)"
+cur=$(hyprctl -j devices | jq -r '[.keyboards[] | select((.name|test("virtual"))|not)][0].active_layout_index')
+case "$cur" in ''|null) cur=0;; esac
+if [ "$cur" -eq 0 ]; then next=1; else next=0; fi
+hyprctl switchxkblayout all "$next" >/dev/null

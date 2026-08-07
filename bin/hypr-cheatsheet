@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# hypr-cheatsheet — шпаргалка хоткеев Hyprland (просмотр через fuzzel --dmenu, выбор
+# ничего не делает). Бинд: SUPER+/. СИНХРОНИЗИРОВАНО с ~/.config/hypr/hyprland.conf (bind=/bindm=
+# /bindl=) — при правке биндов обнови и этот список. Категории через строки-заголовки.
+cat <<'EOF' | fuzzel --dmenu --prompt "хоткеи  " --width 60 --lines 34 --font "JetBrainsMono Nerd Font:size=10" >/dev/null 2>&1
+──── Приложения ────
+SUPER+Return / T      терминал (foot)
+SUPER+Shift+Return/T  терминал (gnome-terminal)
+SUPER+D               лончер приложений (rofi drun)
+SUPER+Shift+D         лончер (fuzzel)
+SUPER+E               файлы (nautilus)
+──── Окна ────
+SUPER+Q               закрыть окно
+SUPER+F               на весь экран (fullscreen)
+SUPER+Shift+Space     плавающее окно вкл/выкл
+SUPER+P               псевдо-тайл (pseudo)
+SUPER+J               сменить ось сплита (гориз/верт)
+SUPER+M               свернуть окно (в список слева)
+SUPER+S               развернуть свёрнутое окно
+SUPER+ЛКМ-перетаск    двигать окно
+SUPER+ПКМ-перетаск    менять размер окна
+──── Фокус и перемещение ────
+SUPER+стрелки         фокус между окнами
+SUPER+H / K           фокус влево / вверх
+SUPER+Shift+стрелки   двигать окно
+──── Рабочие столы ────
+SUPER+1..0            перейти на стол 1..10
+SUPER+Shift+1..0      перенести окно на стол 1..10
+SUPER+колесо          листать столы
+──── Раскладка и система ────
+SUPER+Space           переключить раскладку (Alt+Shift тоже)
+SUPER+L               заблокировать экран (hyprlock)
+SUPER+Shift+R         перечитать конфиг Hyprland
+SUPER+Shift+M         выйти из сессии Hyprland
+──── Скриншоты, медиа, обои ────
+Print                 скрин ОБЛАСТИ -> буфер + файл
+Shift+Print           скрин ВСЕГО экрана -> буфер + файл
+SUPER+Shift+B         живые GLSL-обои (matrix) вкл/выкл
+мультимедиа-клавиши   громкость / микрофон / плеер (play·next·prev)
+SUPER+/               эта шпаргалка
+EOF

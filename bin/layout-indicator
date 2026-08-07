@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# layout-indicator — индикатор раскладки для waybar (custom-модуль).
+# Читает раскладку ФИЗИЧЕСКОЙ клавы через hyprctl (то, что реально печатает пользователь),
+# а НЕ main-клаву (под Hyprland main может быть виртуальная клава, часто на EN → врёт).
+# Печатает 🇷🇺 для RU, EN для EN. Быстро, без gdbus.
+import json
+import os
+import subprocess
+import sys
+
+os.environ.setdefault("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid())
+
+
+def physical_keymap(kbs):
+    def real(k):
+        n = k.get("name", "")
+        return "keyboard" in n and "virtual" not in n
+    kb = next((k for k in kbs if k.get("name") == "at-translated-set-2-keyboard"), None)
+    if kb is None:
+        kb = next((k for k in kbs if real(k)), None)
+    if kb is None:
+        kb = kbs[0] if kbs else None
+    return (kb.get("active_keymap") or "") if kb else ""
+
+
+try:
+    out = subprocess.run(["hyprctl", "-j", "devices"], capture_output=True, text=True)
+    kbs = json.loads(out.stdout).get("keyboards", [])
+    km = physical_keymap(kbs).lower()
+    sys.stdout.write("🇷🇺" if ("rus" in km or km.startswith("ru")) else "EN")
+except Exception:
+    sys.stdout.write("")

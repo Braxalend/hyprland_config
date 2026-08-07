@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# shader-wall — TOGGLE живых GLSL-обоев (glpaper) под Hyprland на ВСЕ подключённые
+# выходы. НЕ автозапуск (по кнопке SUPER+SHIFT+B — батарею при входе не жрёт, если
+# запускать не из exec-once). glpaper = ОДИН инстанс на ОДИН output → поднимаем по
+# инстансу на каждый монитор. Radeon 680M тянет (один инстанс проверен ≤46°C).
+# Дефолт-шейдер — зелёный matrix-дым. По умолчанию (выкл.) — статичные обои hyprpaper.
+# Аргумент 1 (опц.) — имя шейдера в ~/.config/hypr/shaders (по умолч. smoke-green.frag).
+# FPS настраивается env FPS= (по умолч. 30).
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+GLPAPER="$(command -v glpaper || echo /usr/local/bin/glpaper)"
+SHADER_DIR="$HOME/.config/hypr/shaders"
+SHADER="$SHADER_DIR/${1:-smoke-green.frag}"
+FPS="${FPS:-30}"
+note(){ notify-send -a shader-wall "$1" "$2" 2>/dev/null || true; }
+
+outputs(){ hyprctl monitors -j | python3 -c 'import json,sys;[print(m["name"]) for m in json.load(sys.stdin)]'; }
+has_glpaper_on(){ pgrep -af glpaper | grep -qE "[[:space:]]$1[[:space:]/]"; }
+start_one(){ has_glpaper_on "$1" && return 0
+  setsid "$GLPAPER" -f "$FPS" "$1" "$SHADER" >"/tmp/glpaper-$1.out" 2>&1 </dev/null & disown 2>/dev/null || true; }
+
+# TOGGLE: если хоть один glpaper жив — выключаем всё, возвращаем hyprpaper
+if pgrep -x glpaper >/dev/null 2>&1; then
+    pkill -x glpaper 2>/dev/null || true
+    sleep 0.3
+    pgrep -x hyprpaper >/dev/null 2>&1 || { hyprpaper >/dev/null 2>&1 & disown; }
+    note "Обои: статичные" "GLSL-шейдер выключен на всех выходах"
+    exit 0
+fi
+
+# СТАРТ: гасим hyprpaper (чтобы не было двух фоновых слоёв), поднимаем glpaper на каждом выходе
+pkill -x hyprpaper 2>/dev/null || true
+sleep 0.2
+for o in $(outputs); do start_one "$o"; done
+sleep 1.2
+if pgrep -x glpaper >/dev/null 2>&1; then
+    n=$(pgrep -xc glpaper)
+    note "Обои: GLSL matrix-дым" "выходов: $n, ${FPS}fps. Повтор SUPER+SHIFT+B — выкл."
+else
+    { hyprpaper >/dev/null 2>&1 & disown; }
+    note "Шейдер не запустился" "glpaper упал — вернул статичные обои. Лог: /tmp/glpaper-*.out"
+fi

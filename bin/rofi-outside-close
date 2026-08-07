@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# rofi-outside-close — закрывает открытый rofi, если клик пришёлся ВНЕ его окна
+# (по любому окну И по ПУСТОМУ рабочему столу — где фокус никуда не уходит и rofi
+# сам бы не закрылся). Вешается на bindn mouse:272 на время жизни rofi; сам снимает
+# бинд после срабатывания и авто-лечит «осиротевший» бинд (когда rofi уже закрыт).
+import json, subprocess, sys
+
+def hypr_json(*a):
+    try:
+        return json.loads(subprocess.run(["hyprctl", "-j", *a],
+                          capture_output=True, text=True).stdout)
+    except Exception:
+        return None
+
+def unbind():
+    subprocess.run(["hyprctl", "keyword", "unbind", ",mouse:272"],
+                   capture_output=True)
+
+clients = hypr_json("clients") or []
+rofi = [c for c in clients if c.get("class") == "Rofi"]
+if not rofi:
+    unbind()            # rofi уже закрыт → снять осиротевший бинд
+    sys.exit(0)
+
+cp = subprocess.run(["hyprctl", "cursorpos"], capture_output=True, text=True).stdout
+try:
+    cx, cy = (int(x.strip()) for x in cp.strip().split(","))
+except Exception:
+    sys.exit(0)         # не смогли прочитать курсор — ничего не делаем
+
+inside = any(c["at"][0] <= cx <= c["at"][0] + c["size"][0]
+             and c["at"][1] <= cy <= c["at"][1] + c["size"][1] for c in rofi)
+if not inside:
+    subprocess.run(["pkill", "-x", "rofi"])
+    unbind()

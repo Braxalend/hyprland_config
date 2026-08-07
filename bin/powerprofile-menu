@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# powerprofile-menu — rofi-меню профилей питания (powerprofilesctl) + тумблер Boost.
+# Клик по #battery в waybar. matrix-тема menu.rasi, позиция под #battery (сдвиг 55px справа).
+# Boost: запись в /sys/.../cpufreq/boost через sudo -A (askpass zenity), без sudoers.
+# Закрытие по клику-мимо (вкл. пустой рабочий стол) — через rofi-menu (bindn mouse + closer).
+# ВАЖНО: \0/\x1f эмитим прямо в printf-формате (bash не хранит NUL в переменной).
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export SUDO_ASKPASS="$HOME/.local/bin/sudo-askpass"
+RMENU="$HOME/.local/bin/rofi-menu"
+ic() { printf '%s\0icon\x1f%s' "$1" "$2"; }
+
+cur=$(powerprofilesctl get 2>/dev/null)
+BOOST_FILE=/sys/devices/system/cpu/cpufreq/boost
+bstate=$(cat "$BOOST_FILE" 2>/dev/null)
+[ "$bstate" = "1" ] && blabel="вкл" || blabel="выкл"
+mark() { [ "$1" = "$cur" ] && printf '● ' || printf '○ '; }
+
+choice=$( { ic "$(mark performance)Производительность" power-profile-performance-symbolic; printf '\n'
+            ic "$(mark balanced)Сбалансированный"       power-profile-balanced-symbolic;    printf '\n'
+            ic "$(mark power-saver)Энергосбережение"    power-profile-power-saver-symbolic; printf '\n'
+            ic "  Boost: $blabel"                        speedometer-symbolic;               printf '\n'; } | "$RMENU" 55 4 340 )
+
+case "$choice" in
+    *Производ*) powerprofilesctl set performance ;;
+    *Сбаланс*)  powerprofilesctl set balanced ;;
+    *Энерго*)   powerprofilesctl set power-saver ;;
+    *Boost*)    [ "$bstate" = "1" ] && new=0 || new=1
+                echo "$new" | sudo -A tee "$BOOST_FILE" >/dev/null ;;
+esac

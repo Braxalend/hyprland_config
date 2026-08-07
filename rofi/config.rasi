@@ -1,0 +1,33 @@
+/* rofi — drun-лончер (SUPER+SHIFT+D), замена wofi.
+   X11-сборка rofi 1.7.5 под XWayland (rofi-wayland в репозиториях noble отсутствует).
+   Иконки слева + MRU-сортировка (drun-история ~/.cache/rofi3.druncache) + matrix-тема. */
+configuration {
+    modi:                "drun";
+    show-icons:          true;
+    icon-theme:          "Yaru";
+    drun-display-format: "{name}";
+    display-drun:        "Приложения";
+    /* fuzzy + регистронезависимо — как в wofi (matching=fuzzy, insensitive=true) */
+    matching:            "fuzzy";
+    case-sensitive:      false;
+    /* drun-история включена → часто/недавно запускаемые всплывают наверх
+       (аналог wofi sort_order=default). sorting-method влияет на ранжирование при вводе. */
+    disable-history:     false;
+    sorting-method:      "normal";
+    /* закрытие по клику-мимо/потере фокуса */
+    click-to-exit:       true;
+    terminal:            "foot";
+    /* выделение следует за КУРСОРОМ (hover-select), не только за колесом мыши */
+    hover-select:        true;
+    /* мышь: hover сам подсвечивает строку (me-select пусто), двойной клик активирует; одинарный только hover */
+    me-select-entry:     "MousePrimary";
+    me-accept-entry:     "MouseDPrimary";
+    /* колесо мыши НЕ двигает выделение/не скроллит — навигация только hover-курсором */
+    ml-row-up:           "";
+    ml-row-down:         "";
+    ml-row-left:         "";
+    ml-row-right:        "";
+    /* один модус — Tab/стрелки не уводят в другой modi */
+    combi-hide-mode-prefix: true;
+}
+@theme "~/.config/rofi/matrix.rasi"

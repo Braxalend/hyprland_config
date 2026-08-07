@@ -1,0 +1,14 @@
+[Unit]
+# Пример user-юнита демона под Hyprland/uwsm: стартует вместе с графической сессией,
+# рестарт при падении. Замените ExecStart на свой демон.
+Description=Example user daemon (uwsm/Hyprland graphical session)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/example-daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

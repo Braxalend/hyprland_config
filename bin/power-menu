@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# power-menu — rofi-меню питания (matrix-тема menu.rasi, позиция под #custom-power справа).
+# Клик по #custom-power в waybar. Poweroff/Reboot — с подтверждением. Цветные иконки Yaru.
+# Закрытие по клику-мимо (вкл. пустой рабочий стол) — через rofi-menu (bindn mouse + closer).
+# ВАЖНО: \0 и \x1f нельзя класть в bash-переменную (bash режет NUL) — эмитим в printf-формате.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+RMENU="$HOME/.local/bin/rofi-menu"
+ic()  { printf '%s\0icon\x1f%s' "$1" "$2"; }
+div() { printf '──── %s ────\0nonselectable\x1ftrue' "$1"; }
+
+LOGOUT="Выйти из сессии"; REBOOT="Перезагрузка"; POWEROFF="Выключение"
+
+choice=$( { ic "$LOGOUT" system-log-out;   printf '\n'
+            ic "$REBOOT" system-reboot;     printf '\n'
+            ic "$POWEROFF" system-shutdown; printf '\n'; } | "$RMENU" 6 3 300 )
+
+confirm() {  # $1 = метка «да» (слово-действие), $2 = иконка «да»
+    local out
+    out=$( { div "$1?";                printf '\n'
+             ic "Отмена" window-close;  printf '\n'
+             ic "$1" "$2";              printf '\n'; } | "$RMENU" 6 3 300 )
+    [ "$out" = "$1" ]
+}
+case "$choice" in
+    "$LOGOUT")   uwsm stop ;;
+    "$REBOOT")   confirm "Перезагрузить" system-reboot   && systemctl reboot ;;
+    "$POWEROFF") confirm "Выключить"     system-shutdown && systemctl poweroff ;;
+esac

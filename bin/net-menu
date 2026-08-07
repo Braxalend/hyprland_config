@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# net-menu — диспетчер подключений (клик по индикатору IP в waybar). rofi matrix-меню поверх
+# NetworkManager (nmcli): скан Wi-Fi с диапазоном 2.4/5 ГГц и сигналом, подключение (с запросом
+# пароля), отключение, тумблер радио, проводное; эскейпы → nm-connection-editor / GNOME / nmtui.
+# Ничего рутового, маршруты/nftables/killswitch не трогает.
+#
+# ЗАПРОС ПАРОЛЯ — через нативный zenity --password (НЕ rofi). Причина: rofi matrix-тема menu.rasi
+# считает высоту окна от listview, и парольный prompt с listview{lines:0} схлопывался в невидимую
+# полоску → вис, держал single-instance лок. zenity рисует видимый диалог
+# надёжно (тот же, что sudo-askpass), не single-instance, с повтором при неверном пароле.
+export LC_ALL=C
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export DISPLAY="${DISPLAY:-:0}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+RMENU="$HOME/.local/bin/rofi-menu"
+SEP=" │ "                 # разделитель «метка │ SSID» для восстановления SSID из выбора
+ERR=/tmp/net-menu.err
+
+wdev="$(nmcli -t -f DEVICE,TYPE,STATE dev status | awk -F: '$2=="wifi"&&$3=="connected"{print $1;exit}')"
+[ -z "$wdev" ] && wdev="$(nmcli -t -f DEVICE,TYPE dev status | awk -F: '$2=="wifi"{print $1;exit}')"
+edev="$(nmcli -t -f DEVICE,TYPE,STATE dev status | awk -F: '$2=="ethernet"&&$3=="connected"{print $1;exit}')"
+wifi_state="$(nmcli -t -f WIFI radio 2>/dev/null | awk -F: '{print $NF}')"
+
+band_of(){ local f="${1:-0}"; if [ "$f" -lt 3000 ] 2>/dev/null; then echo "2.4G"; elif [ "$f" -lt 5925 ] 2>/dev/null; then echo "5G"; else echo "6G"; fi; }
+
+# нужен ли пароль по тексту ошибки nmcli
+needs_pw(){ grep -qiE "secret|password|802-1x|auth|key|not provided" "$ERR"; }
+
+connect_wifi(){
+  local ssid="$1" pw tries=0 title
+  # сохранённый профиль -> просто up (использует хранимый секрет)
+  if nmcli -t -f NAME con show | grep -qxF "$ssid"; then
+    nmcli con up id "$ssid" >/dev/null 2>"$ERR" && return 0
+  fi
+  # открытая / уже сохранённая сеть -> без пароля
+  if nmcli -w 15 dev wifi connect "$ssid" >"$ERR" 2>&1; then return 0; fi
+  # нужен пароль -> надёжный видимый ввод в терминале foot (rofi/zenity под Wayland капризили)
+  if needs_pw; then
+    setsid -f foot -T "Wi-Fi: $ssid" -e bash "$HOME/.local/bin/wifi-passwd-connect" "$ssid" >/dev/null 2>&1
+  fi
+}
+
+# --- построение меню ---
+build(){
+  if [ -n "$wdev" ] && [ "$wifi_state" = "enabled" ]; then
+    ap="$(nmcli -t -f IN-USE,SIGNAL,FREQ dev wifi | awk -F: '$1=="*"{print;exit}')"
+    csig="$(printf '%s' "$ap" | cut -d: -f2)"; cfreq="$(printf '%s' "$ap" | cut -d: -f3 | grep -oE '[0-9]+')"
+    cssid="$(nmcli -g GENERAL.CONNECTION dev show "$wdev" 2>/dev/null)"
+    printf '● %s · %s · %s%%\0nonselectable\x1ftrue\n' "$cssid" "$(band_of "$cfreq")" "$csig"
+  fi
+  [ -n "$edev" ] && printf '🔌 Провод: %s\0nonselectable\x1ftrue\n' "$(nmcli -g GENERAL.CONNECTION dev show "$edev" 2>/dev/null)"
+  printf '─────────────\0nonselectable\x1ftrue\n'
+
+  if [ "$wifi_state" = "enabled" ]; then
+    nmcli -t -f IN-USE,SIGNAL,FREQ,SSID dev wifi 2>/dev/null | \
+      awk -F: '{iu=$1;sg=$2;fq=$3;s=$0;sub(/^[^:]*:[^:]*:[^:]*:/,"",s);gsub(/\\:/,":",s);if(s=="")next;print sg"\t"iu"\t"fq"\t"s}' | \
+      sort -t$'\t' -k1,1nr | awk -F'\t' '!seen[$4]++' | \
+    while IFS=$'\t' read -r sg iu fq ssid; do
+      mk="○"; [ "$iu" = "*" ] && mk="●"
+      fnum="$(printf '%s' "$fq" | grep -oE '[0-9]+' | head -1)"
+      printf '%s %-4s %3s%%%s%s\0icon\x1fnetwork-wireless\n' "$mk" "$(band_of "$fnum")" "$sg" "$SEP" "$ssid"
+    done
+  fi
+
+  printf '─────────────\0nonselectable\x1ftrue\n'
+  printf '🔄 Пересканировать Wi-Fi\0icon\x1fview-refresh\n'
+  if [ "$wifi_state" = "enabled" ]; then printf '📴 Выключить Wi-Fi\0icon\x1fnetwork-wireless-offline\n'
+  else printf '📶 Включить Wi-Fi\0icon\x1fnetwork-wireless\n'; fi
+  [ -n "$wdev" ] && [ "$wifi_state" = "enabled" ] && printf '✂ Отключить текущее Wi-Fi\0icon\x1fnetwork-offline\n'
+  if [ -n "$edev" ]; then printf '🔌 Отключить провод\0icon\x1fnetwork-wired-disconnected\n'
+  else printf '🔌 Подключить провод\0icon\x1fnetwork-wired\n'; fi
+  printf '⚙ Редактор соединений\0icon\x1fpreferences-system-network\n'
+  printf '🖥 Настройки сети (GNOME)\0icon\x1fnetwork-workgroup\n'
+  printf '⌨ nmtui (терминал)\0icon\x1futilities-terminal\n'
+}
+
+choice="$(build | "$RMENU" 430 15 360)"
+[ -z "$choice" ] && exit 0
+
+case "$choice" in
+  "🔄 Пересканировать"*)    nmcli dev wifi rescan >/dev/null 2>&1; exec "$0" ;;
+  "📴 Выключить Wi-Fi")     nmcli radio wifi off ;;
+  "📶 Включить Wi-Fi")      nmcli radio wifi on ;;
+  "✂ Отключить"*)           [ -n "$wdev" ] && nmcli dev disconnect "$wdev" >/dev/null 2>&1 ;;
+  "🔌 Отключить провод")    [ -n "$edev" ] && nmcli dev disconnect "$edev" >/dev/null 2>&1 ;;
+  "🔌 Подключить провод")   p="$(nmcli -t -f NAME,TYPE con show | awk -F: '$2=="802-3-ethernet"{print $1;exit}')"; [ -n "$p" ] && nmcli con up id "$p" >/dev/null 2>&1 ;;
+  "⚙ Редактор"*)            setsid -f nm-connection-editor >/dev/null 2>&1 ;;
+  "🖥 Настройки"*)          setsid -f gnome-control-center wifi >/dev/null 2>&1 ;;
+  "⌨ nmtui"*)               setsid -f foot -e nmtui >/dev/null 2>&1 ;;
+  *"$SEP"*)                 ssid="${choice##*$SEP}"; connect_wifi "$ssid" ;;
+  *) : ;;
+esac
+
+pkill -RTMIN+8 -x waybar 2>/dev/null
+exit 0

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# menu-example — ПРИМЕР трей-меню на rofi (matrix-тема menu.rasi, позиция в правом верхнем
+# углу). Обезличенный шаблон: типовые пункты «браузер / терминал / файлы / выход».
+# Показывает механику rofi-menu: пункты со значками (\0icon\x1f<name>), невыбираемые
+# разделители (\0nonselectable\x1ftrue), закрытие по клику-мимо.
+# Запуск из waybar custom-модуля или по хоткею. Свои пункты добавляйте по образцу ниже.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+RMENU="$HOME/.local/bin/rofi-menu"
+ic()  { printf '%s\0icon\x1f%s' "$1" "$2"; }
+div() { printf '──── %s ────\0nonselectable\x1ftrue' "$1"; }
+
+choice=$( { div "Приложения";                        printf '\n'
+            ic "Браузер"    web-browser;             printf '\n'
+            ic "Терминал"   utilities-terminal;      printf '\n'
+            ic "Файлы"      system-file-manager;     printf '\n'
+            div "Сессия";                            printf '\n'
+            ic "Выход"      system-log-out;          printf '\n'; } | "$RMENU" 6 7 280 )
+
+case "$choice" in
+    "Браузер")   uwsm app -- firefox ;;
+    "Терминал")  uwsm app -- foot ;;
+    "Файлы")     uwsm app -- nautilus ;;
+    "Выход")     uwsm stop ;;
+esac
